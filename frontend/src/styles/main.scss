@@ -1,0 +1,363 @@
+﻿@use './booking';
+@use './admin';
+
+$main-bg: #ffffff;
+$sec-bg: #f5f5f5;
+$accent: #000000;
+$text: #333333;
+$gray: #888888;
+$radius: 20px;
+$green: #1a7a4a;
+$red: #b00020;
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  background: $sec-bg;
+  color: $text;
+}
+
+* { box-sizing: border-box; }
+
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; }
+
+/* ── Layout ── */
+.app-shell { min-height: 100vh; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: $main-bg;
+  border-bottom: 1px solid #eee;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.logo {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 1.1rem;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  a {
+    font-weight: 600;
+    font-size: 0.9rem;
+
+    &:hover { text-decoration: underline; }
+  }
+}
+
+.logout-button {
+  border: none;
+  background: transparent;
+  color: $accent;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.page-content { padding: 24px 20px; }
+
+/* ── Cards ── */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.login-card,
+.app-card {
+  background: $main-bg;
+  width: 100%;
+  max-width: 480px;
+  padding: 28px 24px;
+  border-radius: $radius;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  margin: 0 auto;
+}
+
+.admin-card {
+  background: $main-bg;
+  width: 100%;
+  max-width: 720px;
+  padding: 28px 24px;
+  border-radius: $radius;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  margin: 0 auto;
+}
+
+.login-card h2,
+.app-card h1,
+.admin-card h1 {
+  margin: 0 0 20px;
+  text-align: center;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.login-card form { display: grid; gap: 14px; }
+
+/* ── Inputs ── */
+.login-card input,
+.input-text {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+
+  &:focus { border-color: $accent; }
+}
+
+textarea.input-text { resize: vertical; }
+
+.login-card button,
+.btn-confirm {
+  background: $accent;
+  color: white;
+  border: none;
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover { opacity: 0.85; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.btn-secondary {
+  background: #f0f0f0;
+  color: $text;
+  border: 1px solid #ddd;
+  padding: 10px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+
+  &:hover { background: #e5e5e5; }
+}
+
+.btn-cancel {
+  background: transparent;
+  color: $red;
+  border: 1px solid $red;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 10px;
+
+  &:hover { background: $red; color: #fff; }
+}
+
+/* ── Section ── */
+.section-title {
+  font-size: 0.75rem;
+  color: $gray;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-top: 22px;
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Option grid ── */
+.option-grid { display: grid; gap: 10px; }
+
+.card-opt {
+  border: 1px solid #eee;
+  padding: 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  position: relative;
+  background: #fff;
+
+  &:hover { transform: translateY(-1px); border-color: #ccc; }
+  &.selected { border: 2px solid $accent; background: #fafafa; }
+}
+
+.price-tag {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* ── Time grid ── */
+.time-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.time-slot {
+  padding: 10px 6px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: 0.15s;
+
+  &:hover { border-color: $accent; }
+  &.selected { background: $accent; color: #fff; border-color: $accent; }
+}
+
+/* ── Misc ── */
+.subtitle {
+  text-align: center;
+  color: $gray;
+  font-size: 0.9rem;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.error-text { color: $red; margin-top: 12px; text-align: center; font-size: 0.9rem; }
+.success-text { color: $green; margin-top: 12px; text-align: center; font-size: 0.9rem; }
+.empty-msg { color: $gray; text-align: center; padding: 20px 0; font-size: 0.9rem; }
+
+.login-link {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.9rem;
+  color: $gray;
+
+  a { color: $accent; font-weight: 600; }
+}
+
+/* ── Reservations list ── */
+.reservations-list { display: grid; gap: 12px; margin-top: 16px; }
+
+.reservation-item {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+
+  &.confirmed { border-left: 3px solid $green; }
+  &.cancelled { opacity: 0.55; }
+}
+
+.reservation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.reservation-date { font-size: 0.85rem; color: $gray; font-weight: 600; }
+
+.reservation-body { font-size: 0.92rem; }
+
+.reservation-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+.badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+
+.badge-pending { background: #fff3cd; color: #856404; }
+.badge-confirmed { background: #d1e7dd; color: #0f5132; }
+.badge-cancelled { background: #f8d7da; color: #842029; }
+
+/* ── Shop list (landing) ── */
+.shop-list-page {
+  min-height: 100vh;
+  background: $sec-bg;
+}
+
+.shop-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 28px;
+  background: $main-bg;
+  border-bottom: 1px solid #eee;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.header-brand {
+  font-weight: 900;
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  a { font-weight: 600; font-size: 0.9rem; &:hover { text-decoration: underline; } }
+}
+
+.btn-register-sm {
+  background: $accent;
+  color: #fff;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.shop-list-content {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  text-align: center;
+
+  h2 { font-size: 1.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 8px; }
+}
+
+.shop-list-subtitle {
+  color: $gray;
+  margin-bottom: 36px;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+  text-align: left;
+}
+
+.shop-card {
+  background: $main-bg;
+  border-radius: $radius;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  h3 { margin: 0; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; }
+  .shop-address, .shop-phone { margin: 0; font-size: 0.85rem; color: $gray; }
+  .btn-confirm { margin-top: 12px; }
+}

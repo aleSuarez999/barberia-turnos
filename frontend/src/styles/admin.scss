@@ -1,0 +1,308 @@
+﻿/* Admin panel styles */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  padding: 10px 18px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #888;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: 0.15s;
+  border-radius: 4px 4px 0 0;
+  &:hover { color: #000; background: #f5f5f5; }
+  &.active { color: #000; border-bottom-color: #000; }
+}
+
+.tab-content { min-height: 200px; }
+
+/* ── Admin form ── */
+.admin-form {
+  background: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 20px;
+  display: grid;
+  gap: 10px;
+
+  h3 { margin: 0 0 4px; font-size: 0.95rem; }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    &:focus { outline: none; border-color: #000; }
+  }
+}
+
+.form-actions { display: flex; gap: 10px; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: #666; font-weight: 600; }
+  input { padding: 8px; }
+}
+
+/* ── Admin list ── */
+.admin-list { display: grid; gap: 8px; }
+
+.admin-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background: #fff;
+  gap: 12px;
+  &.inactive { opacity: 0.5; }
+}
+
+.item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+.btn-icon {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 5px 9px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: 0.15s;
+  &:hover { background: #f0f0f0; }
+  &.btn-danger:hover { background: #b00020; color: #fff; border-color: #b00020; }
+}
+
+.btn-small {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.btn-confirm-sm { background: #1a7a4a; color: #fff; }
+.btn-cancel-sm { background: #b00020; color: #fff; }
+
+.tag-list { color: #888; font-size: 0.8rem; margin-left: 8px; }
+.slug-tag { color: #1a7a4a !important; font-family: monospace; font-size: 0.78rem; }
+.price-tag-sm { font-weight: 700; font-size: 0.85rem; margin-left: 8px; }
+
+/* ── Slug field ── */
+.slug-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: monospace;
+    &:focus { outline: none; border-color: #000; }
+  }
+}
+
+.slug-preview {
+  font-size: 0.78rem;
+  color: #888;
+  padding-left: 2px;
+  strong { color: #1a7a4a; font-family: monospace; }
+}
+
+/* ── Filter bar ── */
+.filter-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.filter-btn {
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  padding: 5px 14px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: 0.15s;
+  &:hover { background: #e0e0e0; }
+  &.active { background: #000; color: #fff; border-color: #000; }
+}
+
+/* ── Shop config ── */
+.shop-config-card {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 18px;
+  background: #fff;
+  margin-bottom: 12px;
+}
+
+.shop-info {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  strong { font-size: 1rem; }
+  span { font-size: 0.85rem; color: #888; }
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 24px;
+  input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #ccc;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: 0.3s;
+    &::before {
+      content: '';
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+  }
+  input:checked + .toggle-slider { background: #1a7a4a; }
+  input:checked + .toggle-slider::before { transform: translateX(22px); }
+}
+
+.text-active { color: #1a7a4a; }
+.text-inactive { color: #888; }
+
+/* ── Buttons ── */
+.btn-secondary {
+  padding: 10px 18px;
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  &:hover { background: #e0e0e0; }
+}
+
+.btn-confirm {
+  padding: 10px 18px;
+  background: #000;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  &:hover { background: #333; }
+}
+
+/* ── File upload ── */
+.file-upload-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.file-upload-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 600;
+  cursor: pointer;
+
+  input[type="file"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px dashed #bbb;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 0.8rem;
+    cursor: pointer;
+    &:focus { outline: none; border-color: #000; }
+  }
+}
+
+.file-name-hint {
+  font-size: 0.75rem;
+  color: #aaa;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Shop list item ── */
+.shop-item {
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.shop-item-thumbs {
+  flex-shrink: 0;
+}
+
+.shop-thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.shop-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  strong { font-size: 1rem; }
+}
+
+.tag-inactive {
+  color: #b00020 !important;
+  font-weight: 600;
+}
+
+.empty-msg {
+  color: #aaa;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.success-text { color: #1a7a4a; font-size: 0.88rem; }
+.error-text { color: #b00020; font-size: 0.88rem; }

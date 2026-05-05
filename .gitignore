@@ -1,0 +1,33 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno (contienen credenciales)
+.env
+.env.local
+.env.production
+
+# WhatsApp session (se regenera escaneando el QR)
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Imagenes subidas por usuarios (archivos binarios locales)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Build del frontend
+frontend/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp
+
+# Claude Code (uso interno)
+.claude/
