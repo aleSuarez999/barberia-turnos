@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { QRCode } from 'react-qr-code';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthProvider';
@@ -161,10 +161,10 @@ function TabBarberias() {
             </div>
             <div className="item-actions">
               <button type="button" className="btn-icon" onClick={() => toggleActive(s)} title={s.active ? 'Desactivar' : 'Activar'}>
-                {s.active ? 'âœ“' : 'âœ—'}
+                {s.active ? '✓' : '✗'}
               </button>
-              <button type="button" className="btn-icon" onClick={() => editShop(s)}>âœ</button>
-              <button type="button" className="btn-icon btn-danger" onClick={() => deleteShop(s._id)}>ðŸ—‘</button>
+              <button type="button" className="btn-icon" onClick={() => editShop(s)}>✏</button>
+              <button type="button" className="btn-icon btn-danger" onClick={() => deleteShop(s._id)}>🗑</button>
             </div>
           </div>
         ))}
@@ -265,8 +265,8 @@ function TabAdmins() {
               <span className="tag-list">{a.shop ? a.shop.name : <em>Sin barberia asignada</em>}</span>
             </div>
             <div className="item-actions">
-              <button type="button" className="btn-icon" onClick={() => editAdmin(a)}>âœ</button>
-              <button type="button" className="btn-icon btn-danger" onClick={() => deleteAdmin(a._id)}>ðŸ—‘</button>
+              <button type="button" className="btn-icon" onClick={() => editAdmin(a)}>✏</button>
+              <button type="button" className="btn-icon btn-danger" onClick={() => deleteAdmin(a._id)}>🗑</button>
             </div>
           </div>
         ))}
@@ -375,9 +375,9 @@ function TabBarberos() {
           <div key={b._id} className={`admin-list-item ${!b.active ? 'inactive' : ''}`}>
             <div><strong>{b.name}</strong>{b.specialties?.length > 0 && <span className="tag-list">{b.specialties.join(', ')}</span>}</div>
             <div className="item-actions">
-              <button type="button" className="btn-icon" onClick={() => toggleActive(b)} title={b.active ? 'Desactivar' : 'Activar'}>{b.active ? 'âœ“' : 'âœ—'}</button>
-              <button type="button" className="btn-icon" onClick={() => editBarber(b)}>âœ</button>
-              <button type="button" className="btn-icon btn-danger" onClick={() => deleteBarber(b._id)}>ðŸ—‘</button>
+              <button type="button" className="btn-icon" onClick={() => toggleActive(b)} title={b.active ? 'Desactivar' : 'Activar'}>{b.active ? '✓' : '✗'}</button>
+              <button type="button" className="btn-icon" onClick={() => editBarber(b)}>✏</button>
+              <button type="button" className="btn-icon btn-danger" onClick={() => deleteBarber(b._id)}>🗑</button>
             </div>
           </div>
         ))}
@@ -435,9 +435,9 @@ function TabActividades() {
               <span className="tag-list">{a.durationMinutes} min</span>
             </div>
             <div className="item-actions">
-              <button type="button" className="btn-icon" onClick={() => toggleActive(a)} title={a.active ? 'Desactivar' : 'Activar'}>{a.active ? 'âœ“' : 'âœ—'}</button>
-              <button type="button" className="btn-icon" onClick={() => editActivity(a)}>âœ</button>
-              <button type="button" className="btn-icon btn-danger" onClick={() => deleteActivity(a._id)}>ðŸ—‘</button>
+              <button type="button" className="btn-icon" onClick={() => toggleActive(a)} title={a.active ? 'Desactivar' : 'Activar'}>{a.active ? '✓' : '✗'}</button>
+              <button type="button" className="btn-icon" onClick={() => editActivity(a)}>✏</button>
+              <button type="button" className="btn-icon btn-danger" onClick={() => deleteActivity(a._id)}>🗑</button>
             </div>
           </div>
         ))}
@@ -499,7 +499,7 @@ function TabHorarios() {
               <span className="tag-list">{WEEKDAYS[s.weekday]}: {s.startTime} - {s.endTime} ({s.slotMinutes} min)</span>
             </div>
             <div className="item-actions">
-              <button type="button" className="btn-icon btn-danger" onClick={() => deleteSchedule(s._id)}>ðŸ—‘</button>
+              <button type="button" className="btn-icon btn-danger" onClick={() => deleteSchedule(s._id)}>🗑</button>
             </div>
           </div>
         ))}
@@ -568,8 +568,8 @@ function TabClientes() {
               {c.phone && <span className="tag-list">{c.phone}</span>}
             </div>
             <div className="item-actions">
-              <button type="button" className="btn-icon" onClick={() => editClient(c)}>âœ</button>
-              <button type="button" className="btn-icon btn-danger" onClick={() => deleteClient(c._id)}>ðŸ—‘</button>
+              <button type="button" className="btn-icon" onClick={() => editClient(c)}>✏</button>
+              <button type="button" className="btn-icon btn-danger" onClick={() => deleteClient(c._id)}>🗑</button>
             </div>
           </div>
         ))}
@@ -624,7 +624,6 @@ function TabConfig() {
     </div>
   );
 }
-
 
 /* ======= WHATSAPP (shopadmin) ======= */
 function TabWhatsApp() {
@@ -701,4 +700,3 @@ function TabWhatsApp() {
     </div>
   );
 }
-
