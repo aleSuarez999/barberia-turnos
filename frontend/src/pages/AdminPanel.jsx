@@ -114,7 +114,6 @@ function TabBarberias() {
             placeholder="Identificador URL (ej: barberia01)"
             value={form.slug}
             onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
-            pattern="[a-z0-9-]*"
             title="Solo letras minusculas, numeros y guiones"
           />
           {form.slug && (
