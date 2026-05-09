@@ -46,6 +46,7 @@ export default function Booking() {
 
   const [shopId, setShopId] = useState(null);
   const [shopName, setShopName] = useState('');
+  const [shopLogo, setShopLogo] = useState('');
   const [shopError, setShopError] = useState('');
 
   const [activities, setActivities] = useState([]);
@@ -83,7 +84,11 @@ export default function Booking() {
   // Resolver slug → shopId
   useEffect(() => {
     api.get(`/public/shops/slug/${shopSlug}`)
-      .then((r) => { setShopId(r.data.shop._id); setShopName(r.data.shop.name); })
+      .then((r) => {
+        setShopId(r.data.shop._id);
+        setShopName(r.data.shop.name);
+        setShopLogo(r.data.shop.logo || r.data.shop.image || '');
+      })
       .catch(() => setShopError('Barberia no encontrada'));
   }, [shopSlug]);
 
@@ -291,6 +296,7 @@ export default function Booking() {
   if (step === 1) {
     return (
       <div className="app-card">
+        {shopLogo && <img src={shopLogo} alt={shopName} className="shop-logo" />}
         <h1>{shopName || '...'}</h1>
         <p className="subtitle">Turnos Online</p>
 

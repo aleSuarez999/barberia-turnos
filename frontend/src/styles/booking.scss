@@ -222,6 +222,16 @@
   margin: 0 0 4px;
 }
 
+/* ── Logo de la barbería ── */
+.shop-logo {
+  display: block;
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  margin: 0 auto 8px;
+  border-radius: 12px;
+}
+
 /* booking-specific overrides */
 .app-card .subtitle { margin-bottom: 8px; }
 
