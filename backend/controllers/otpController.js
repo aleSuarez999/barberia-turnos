@@ -5,7 +5,7 @@ import Reservation from '../models/Reservation.js';
 import Barber from '../models/Barber.js';
 import Activity from '../models/Activity.js';
 import Barbershop from '../models/Barbershop.js';
-import { sendWhatsApp } from '../utils/whatsappClient.js';
+import { send as waSend } from '../utils/whatsappManager.js';
 
 const generateCode = () => String(Math.floor(100000 + Math.random() * 900000));
 
@@ -14,7 +14,7 @@ const generateCode = () => String(Math.floor(100000 + Math.random() * 900000));
 // Paso 1: envia OTP para registrar un cliente nuevo
 export const sendRegisterOtp = async (req, res) => {
   try {
-    const { phone, name, email } = req.body;
+    const { phone, name, email, shopSlug } = req.body;
     if (!phone || !name) {
       return res.status(400).json({ ok: false, msg: 'Nombre y celular son obligatorios' });
     }
@@ -29,7 +29,10 @@ export const sendRegisterOtp = async (req, res) => {
     await Otp.create({ phone, code, name, email });
 
     try {
-      await sendWhatsApp(phone, `*Codigo de verificacion*\n\nHola ${name}! Tu codigo es: *${code}*\n\nValido por 10 minutos.`);
+      const regShop = shopSlug ? await (await import('../models/Barbershop.js')).default.findOne({ slug: shopSlug.toLowerCase() }) : null;
+      if (regShop) {
+        await waSend(regShop._id.toString(), phone, `*Codigo de verificacion*\n\nHola ${name}! Tu codigo es: *${code}*\n\nValido por 10 minutos.`);
+      }
     } catch (waError) {
       console.warn(`[OTP-Register] WhatsApp no pudo enviar a ${phone}. Codigo: ${code} — Error: ${waError.message}`);
     }
@@ -83,7 +86,7 @@ export const verifyRegisterOtp = async (req, res) => {
 // Verifica si el cliente ya existe. Si es nuevo, envia OTP.
 export const sendOtp = async (req, res) => {
   try {
-    const { phone, name, email } = req.body;
+    const { phone, name, email, shopSlug } = req.body;
     if (!phone || !name) {
       return res.status(400).json({ ok: false, msg: 'Nombre y celular son obligatorios' });
     }
@@ -98,7 +101,10 @@ export const sendOtp = async (req, res) => {
     await Otp.create({ phone, code, name, email });
 
     try {
-      await sendWhatsApp(phone, `*Codigo de verificacion*\n\nHola ${name}! Tu codigo es: *${code}*\n\nValido por 10 minutos.`);
+      const otpShop = shopSlug ? await (await import('../models/Barbershop.js')).default.findOne({ slug: shopSlug.toLowerCase() }) : null;
+      if (otpShop) {
+        await waSend(otpShop._id.toString(), phone, `*Codigo de verificacion*\n\nHola ${name}! Tu codigo es: *${code}*\n\nValido por 10 minutos.`);
+      }
     } catch (waError) {
       // WhatsApp fallo pero el OTP ya esta guardado en MongoDB; se permite continuar
       console.warn(`[OTP] WhatsApp no pudo enviar a ${phone}. Codigo: ${code} — Error: ${waError.message}`);
@@ -252,7 +258,11 @@ async function _createReservation({ client, shopSlug, barberId, activityId, date
       `Te esperamos!`;
   }
 
-  sendWhatsApp(client.phone, confirmMsg).catch((e) => console.warn('WA confirmacion error:', e));
+  waSend(shop._id.toString(), client.phone, confirmMsg).catch((e) => console.warn('WA confirmacion error:', e));
 
   return res.status(201).json({ ok: true, reservation: populated[0], reservations: populated });
 }
+
+
+
+

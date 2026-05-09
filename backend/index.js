@@ -3,6 +3,9 @@ import cors from 'cors';
 import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
+import Barbershop from './models/Barbershop.js';
+import { initClient } from './utils/whatsappManager.js';
 
 import { dbMongo } from './database/dbConnection.js';
 import authRoutes from './routes/auth.routes.js';
@@ -14,6 +17,7 @@ import reservationsRoutes from './routes/reservations.routes.js';
 import clientsRoutes from './routes/clients.routes.js';
 import publicRoutes from './routes/public.routes.js';
 import otpRoutes from './routes/otp.routes.js';
+import whatsappRoutes from './routes/whatsapp.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const server = express();
@@ -36,8 +40,22 @@ const api = async () => {
   server.use('/uploads', express.static(path.join(__dirname, 'uploads')));
   await dbMongo();
 
+  // Auto-restore WhatsApp sessions for shops that already have a saved session
+  try {
+    const allShops = await Barbershop.find({}, '_id');
+    for (const shop of allShops) {
+      const sessionDir = path.join(__dirname, '.wwebjs_auth', 'session-shop_' + shop._id);
+      if (existsSync(sessionDir)) {
+        initClient(shop._id.toString());
+      }
+    }
+  } catch (e) {
+    console.warn('[WA] Error restaurando sesiones:', e.message);
+  }
+
   server.use('/api/public', publicRoutes);
   server.use('/api/otp', otpRoutes);
+  server.use('/api/whatsapp', whatsappRoutes);
   server.use('/api/auth', authRoutes);
   server.use('/api/shops', shopsRoutes);
   server.use('/api/barbers', barbersRoutes);
@@ -55,3 +73,4 @@ api().catch((error) => {
   console.error(error);
   process.exit(1);
 });
+
