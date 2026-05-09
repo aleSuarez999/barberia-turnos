@@ -1,4 +1,5 @@
 import Barber from '../models/Barber.js';
+import Reservation from '../models/Reservation.js';
 
 export const getBarbers = async (req, res) => {
   try {
@@ -47,6 +48,15 @@ export const updateBarber = async (req, res) => {
 export const deleteBarber = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const pendingCount = await Reservation.countDocuments({ barber: id, status: 'pending' });
+    if (pendingCount > 0) {
+      return res.status(409).json({
+        ok: false,
+        msg: `No se puede eliminar el barbero porque tiene ${pendingCount} turno${pendingCount > 1 ? 's' : ''} pendiente${pendingCount > 1 ? 's' : ''}.`,
+      });
+    }
+
     await Barber.findByIdAndDelete(id);
     res.json({ ok: true, msg: 'Barbero eliminado' });
   } catch (error) {

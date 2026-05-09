@@ -1,8 +1,40 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../utils/api';
 
-// Paso 1: elegir servicio, barbero, fecha y hora
+const MONTHS_ES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+const DAYS_ES   = ['DOM','LUN','MAR','MIE','JUE','VIE','SAB'];
+
+function generateDates() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const limit = new Date(today);
+  limit.setMonth(limit.getMonth() + 1);
+  const dates = [];
+  const d = new Date(today);
+  while (d <= limit) {
+    dates.push(new Date(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return dates;
+}
+
+function toDateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function addMinutes(timeStr, minutes) {
+  const [h, m] = timeStr.split(':').map(Number);
+  const total = h * 60 + m + minutes;
+  const nh = Math.floor(total / 60);
+  const nm = total % 60;
+  return `${nh}:${nm === 0 ? '00' : String(nm).padStart(2, '0')}`;
+}
+
+// Paso 1: elegir tipo (individual/grupo), servicio, barbero, fecha y hora
 // Paso 2: ingresar nombre, celular y mail → backend verifica si ya existe
 //   - Si existe: reserva directa (sin OTP)
 //   - Si es nuevo: envía OTP por WhatsApp → paso 3
@@ -10,6 +42,7 @@ import api from '../utils/api';
 
 export default function Booking() {
   const { shopSlug } = useParams();
+  const dateBarRef = useRef(null);
 
   const [shopId, setShopId] = useState(null);
   const [shopName, setShopName] = useState('');
@@ -19,12 +52,19 @@ export default function Booking() {
   const [barbers, setBarbers] = useState([]);
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [selectedBarber, setSelectedBarber] = useState(null);
+
+  const [dates] = useState(() => generateDates());
   const [date, setDate] = useState('');
   const [slots, setSlots] = useState([]);
+  const [slotMinutes, setSlotMinutes] = useState(45);
   const [selectedTime, setSelectedTime] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Paso actual
+  // Tipo de reserva
+  const [isGroup, setIsGroup] = useState(false);
+  const [groupCount, setGroupCount] = useState(2);
+  const [groupMembers, setGroupMembers] = useState([{ name: '' }, { name: '' }]);
+
   const [step, setStep] = useState(1);
 
   // Datos del cliente (paso 2)
@@ -38,14 +78,7 @@ export default function Booking() {
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [reservation, setReservation] = useState(null);
-
-  const today = new Date().toISOString().split('T')[0];
-  const maxDate = (() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + 2);
-    return d.toISOString().split('T')[0];
-  })();
+  const [reservations, setReservations] = useState([]);
 
   // Resolver slug → shopId
   useEffect(() => {
@@ -69,24 +102,66 @@ export default function Booking() {
 
   useEffect(() => {
     if (!selectedBarber || !date) return;
-    const dayOfWeek = new Date(date + 'T00:00:00').getUTCDay();
-    if (dayOfWeek === 0) {
-      setMsg('Los domingos estamos cerrados.');
-      setDate('');
-      setSlots([]);
-      return;
-    }
     setMsg('');
     setSelectedTime('');
     api.get(`/public/slots?barber=${selectedBarber._id}&date=${date}`)
-      .then((r) => setSlots(r.data.slots))
+      .then((r) => {
+        setSlots(r.data.slots);
+        setSlotMinutes(r.data.slotMinutes || 45);
+      })
       .catch(() => setMsg('Error cargando horarios'));
   }, [selectedBarber, date]);
+
+  // Sincronizar array de integrantes con groupCount
+  useEffect(() => {
+    setGroupMembers((prev) => {
+      const next = [...prev];
+      while (next.length < groupCount) next.push({ name: '' });
+      return next.slice(0, groupCount);
+    });
+  }, [groupCount]);
+
+  // Auto-scroll a la fecha seleccionada en la barra
+  useEffect(() => {
+    if (!date || !dateBarRef.current) return;
+    const el = dateBarRef.current.querySelector('.date-item.selected');
+    if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [date]);
+
+  const handleDateSelect = (d) => {
+    if (d.getDay() === 0) return; // Domingos cerrado
+    setDate(toDateKey(d));
+    setSelectedTime('');
+    setSlots([]);
+  };
+
+  // Calcula los slots consecutivos que se usarán para el grupo
+  const getGroupSlots = (startTime) => {
+    if (!isGroup) return [startTime];
+    const slotSet = new Set(slots);
+    const result = [startTime];
+    for (let i = 1; i < groupCount; i++) {
+      const next = addMinutes(result[result.length - 1], slotMinutes);
+      if (!slotSet.has(next)) return null; // no hay suficientes consecutivos
+      result.push(next);
+    }
+    return result;
+  };
+
+  // En modo grupo, solo mostrar horarios donde caben N turnos consecutivos
+  const validSlots = isGroup
+    ? slots.filter((s) => getGroupSlots(s) !== null)
+    : slots;
+
+  const selectedGroupSlots = selectedTime ? (getGroupSlots(selectedTime) || []) : [];
 
   // --- Paso 1 → Paso 2 ---
   const goToClientStep = () => {
     if (!selectedActivity || !selectedBarber || !date || !selectedTime) {
       return setMsg('Completa todos los campos antes de continuar');
+    }
+    if (isGroup && !getGroupSlots(selectedTime)) {
+      return setMsg('No hay suficientes horarios consecutivos disponibles para el grupo');
     }
     setMsg('');
     setStep(2);
@@ -96,6 +171,10 @@ export default function Booking() {
   const handleClientSubmit = async (e) => {
     e.preventDefault();
     if (!clientName || !clientPhone) return setMsg('Nombre y celular son obligatorios');
+    if (isGroup) {
+      const empty = groupMembers.slice(1).find((m) => !m.name.trim());
+      if (empty) return setMsg('Ingresa el nombre de cada integrante del grupo');
+    }
     setLoading(true);
     setMsg('');
     try {
@@ -105,10 +184,8 @@ export default function Booking() {
         email: clientEmail,
       });
       if (resp.data.clientExists) {
-        // Cliente conocido → reservar directamente
         await _doBook({ isNew: false });
       } else {
-        // Cliente nuevo → pedir OTP
         setStep(3);
       }
     } catch (err) {
@@ -134,6 +211,7 @@ export default function Booking() {
   };
 
   const _doBook = async ({ isNew, code }) => {
+    const groupSlots = getGroupSlots(selectedTime);
     const payload = {
       phone: clientPhone,
       shopSlug,
@@ -142,13 +220,19 @@ export default function Booking() {
       date,
       time: selectedTime,
       notes,
+      ...(isGroup && groupSlots && {
+        additionalMembers: groupMembers.slice(1).map((m, i) => ({
+          name: m.name,
+          time: groupSlots[i + 1],
+        })),
+      }),
     };
 
     const endpoint = isNew ? '/otp/verify-and-book' : '/otp/book';
     if (isNew) payload.code = code;
 
     const resp = await api.post(endpoint, payload);
-    setReservation(resp.data.reservation);
+    setReservations(resp.data.reservations || [resp.data.reservation]);
     setSuccess(true);
   };
 
@@ -165,7 +249,10 @@ export default function Booking() {
     setOtpCode('');
     setMsg('');
     setSuccess(false);
-    setReservation(null);
+    setReservations([]);
+    setIsGroup(false);
+    setGroupCount(2);
+    setGroupMembers([{ name: '' }, { name: '' }]);
   };
 
   // --- Pantallas ---
@@ -178,15 +265,21 @@ export default function Booking() {
     return (
       <div className="app-card">
         <h1>{shopName}</h1>
-        <p className="subtitle success-confirm">Turno reservado!</p>
+        <p className="subtitle success-confirm">
+          {reservations.length > 1 ? `${reservations.length} turnos reservados!` : 'Turno reservado!'}
+        </p>
         <p className="subtitle">Te enviamos la confirmacion por WhatsApp.</p>
-        {reservation && (
-          <div className="reservation-summary">
-            <p><strong>{reservation.activity?.title}</strong></p>
-            <p>Barbero: {reservation.barber?.name}</p>
-            <p>Fecha: {reservation.date} a las {reservation.time}</p>
-          </div>
-        )}
+        <div className="reservations-summary">
+          {reservations.map((r, i) => (
+            <div key={r._id || i} className="reservation-summary">
+              {reservations.length > 1 && <p className="summary-label">Turno {i + 1}</p>}
+              <p><strong>{r.activity?.title}</strong></p>
+              <p>Barbero: {r.barber?.name}</p>
+              <p>Fecha: {r.date} a las {r.time}</p>
+              {r.notes && reservations.length > 1 && <p>Persona: {r.notes.split(' — ')[0]}</p>}
+            </div>
+          ))}
+        </div>
         <button className="btn-confirm" type="button" onClick={resetForm}>
           Reservar otro turno
         </button>
@@ -200,6 +293,46 @@ export default function Booking() {
       <div className="app-card">
         <h1>{shopName || '...'}</h1>
         <p className="subtitle">Turnos Online</p>
+
+        {/* Tipo de reserva */}
+        <div className="section-title">Tipo de reserva</div>
+        <div className="booking-type-toggle">
+          <button
+            type="button"
+            className={`booking-type-btn${!isGroup ? ' active' : ''}`}
+            onClick={() => { setIsGroup(false); setSelectedTime(''); }}
+          >
+            Individual
+          </button>
+          <button
+            type="button"
+            className={`booking-type-btn${isGroup ? ' active' : ''}`}
+            onClick={() => { setIsGroup(true); setSelectedTime(''); }}
+          >
+            Grupo
+          </button>
+        </div>
+
+        {isGroup && (
+          <div className="group-count-wrap">
+            <span className="group-count-label">Cantidad de personas:</span>
+            <div className="group-count-controls">
+              <button
+                type="button"
+                className="group-count-btn"
+                onClick={() => setGroupCount((c) => Math.max(2, c - 1))}
+                disabled={groupCount <= 2}
+              >−</button>
+              <span className="group-count-num">{groupCount}</span>
+              <button
+                type="button"
+                className="group-count-btn"
+                onClick={() => setGroupCount((c) => Math.min(6, c + 1))}
+                disabled={groupCount >= 6}
+              >+</button>
+            </div>
+          </div>
+        )}
 
         <div className="section-title">Servicio</div>
         <div className="option-grid">
@@ -230,30 +363,67 @@ export default function Booking() {
           ))}
         </div>
 
-        <div className="section-title">Dia y Hora</div>
-        <input
-          type="date"
-          className="input-text"
-          value={date}
-          min={today}
-          max={maxDate}
-          onChange={(e) => setDate(e.target.value)}
-        />
-        {slots.length > 0 && (
-          <div className="time-grid">
-            {slots.map((t) => (
+        {/* Barra horizontal de fechas */}
+        <div className="section-title">Fecha</div>
+        <div className="date-bar" ref={dateBarRef}>
+          {dates.map((d, i) => {
+            const isSunday = d.getDay() === 0;
+            const key = toDateKey(d);
+            const isSelected = key === date;
+            return (
               <div
-                key={t}
-                className={`time-slot ${selectedTime === t ? 'selected' : ''}`}
-                onClick={() => setSelectedTime(t)}
+                key={i}
+                className={`date-item${isSelected ? ' selected' : ''}${isSunday ? ' disabled' : ''}`}
+                onClick={() => handleDateSelect(d)}
+                title={isSunday ? 'Cerrado' : undefined}
               >
-                {t}
+                <span className="date-dow">{DAYS_ES[d.getDay()]}</span>
+                <span className="date-num">{d.getDate()}</span>
+                <span className="date-month">{MONTHS_ES[d.getMonth()]}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Horarios disponibles */}
+        {date && validSlots.length > 0 && (
+          <>
+            <div className="section-title">
+              Horario
+              {isGroup && ` — solo turnos con ${groupCount} lugares consecutivos`}
+            </div>
+            <div className="time-grid">
+              {validSlots.map((t) => (
+                <div
+                  key={t}
+                  className={`time-slot ${selectedTime === t ? 'selected' : ''}`}
+                  onClick={() => setSelectedTime(t)}
+                >
+                  {t}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        {date && validSlots.length === 0 && !msg && (
+          <p className="empty-msg">
+            {isGroup
+              ? `Sin ${groupCount} horarios consecutivos disponibles para este dia.`
+              : 'Sin horarios disponibles para este dia.'}
+          </p>
+        )}
+
+        {/* Vista previa de slots del grupo */}
+        {isGroup && selectedTime && selectedGroupSlots.length > 0 && (
+          <div className="group-slots-preview">
+            <p className="group-slots-title">Horarios asignados al grupo</p>
+            {selectedGroupSlots.map((t, i) => (
+              <div key={t} className="group-slot-item">
+                <span className="group-slot-num">Persona {i + 1}</span>
+                <span className="group-slot-time">{t}</span>
               </div>
             ))}
           </div>
-        )}
-        {date && slots.length === 0 && !msg && (
-          <p className="empty-msg">Sin horarios disponibles para este dia.</p>
         )}
 
         <div className="section-title">Notas (opcional)</div>
@@ -310,6 +480,40 @@ export default function Booking() {
             value={clientEmail}
             onChange={(e) => setClientEmail(e.target.value)}
           />
+
+          {/* Integrantes del grupo */}
+          {isGroup && (
+            <div className="group-members-section">
+              <div className="section-title">Integrantes del grupo</div>
+              <div className="group-slots-preview" style={{ marginBottom: 12 }}>
+                {selectedGroupSlots.map((t, i) => (
+                  <div key={t} className="group-slot-item">
+                    <span className="group-slot-num">
+                      {i === 0 ? clientName || 'Persona 1' : `Persona ${i + 1}`}
+                    </span>
+                    <span className="group-slot-time">{t}</span>
+                  </div>
+                ))}
+              </div>
+              {groupMembers.slice(1).map((member, i) => (
+                <div key={i} className="group-member-row">
+                  <label className="group-member-label">Nombre persona {i + 2} *</label>
+                  <input
+                    className="input-text"
+                    type="text"
+                    placeholder={`Nombre integrante ${i + 2}`}
+                    value={member.name}
+                    onChange={(e) => {
+                      const updated = [...groupMembers];
+                      updated[i + 1] = { name: e.target.value };
+                      setGroupMembers(updated);
+                    }}
+                    required
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           {msg && <p className="error-text">{msg}</p>}
           <div className="form-actions-booking">

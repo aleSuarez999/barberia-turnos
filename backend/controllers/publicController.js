@@ -73,7 +73,7 @@ export const getAvailableSlots = async (req, res) => {
     const takenTimes = new Set(taken.map((r) => r.time));
 
     const available = slots.filter((s) => !takenTimes.has(s));
-    res.json({ ok: true, slots: available });
+    res.json({ ok: true, slots: available, slotMinutes: schedule.slotMinutes });
   } catch (error) {
     res.status(500).json({ ok: false, msg: 'Error obteniendo slots' });
   }

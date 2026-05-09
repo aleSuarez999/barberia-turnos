@@ -114,7 +114,7 @@ export const sendOtp = async (req, res) => {
 // Para clientes NUEVOS: valida OTP + crea cliente + crea turno
 export const verifyAndBook = async (req, res) => {
   try {
-    const { phone, code, shopSlug, barberId, activityId, date, time, notes } = req.body;
+    const { phone, code, shopSlug, barberId, activityId, date, time, notes, additionalMembers } = req.body;
 
     if (!phone || !code || !shopSlug || !barberId || !activityId || !date || !time) {
       return res.status(400).json({ ok: false, msg: 'Faltan datos para confirmar el turno' });
@@ -136,7 +136,7 @@ export const verifyAndBook = async (req, res) => {
       client = await Client.create({ name: otp.name, phone, email: otp.email || '' });
     }
 
-    return await _createReservation({ client, shopSlug, barberId, activityId, date, time, notes, res });
+    return await _createReservation({ client, shopSlug, barberId, activityId, date, time, notes, additionalMembers, res });
   } catch (error) {
     console.error('verifyAndBook error:', error);
     res.status(500).json({ ok: false, msg: 'Error confirmando el turno' });
@@ -146,7 +146,7 @@ export const verifyAndBook = async (req, res) => {
 // Para clientes EXISTENTES: crea el turno directamente sin OTP
 export const bookExisting = async (req, res) => {
   try {
-    const { phone, shopSlug, barberId, activityId, date, time, notes } = req.body;
+    const { phone, shopSlug, barberId, activityId, date, time, notes, additionalMembers } = req.body;
 
     if (!phone || !shopSlug || !barberId || !activityId || !date || !time) {
       return res.status(400).json({ ok: false, msg: 'Faltan datos para reservar' });
@@ -157,14 +157,14 @@ export const bookExisting = async (req, res) => {
       return res.status(400).json({ ok: false, msg: 'Cliente no encontrado' });
     }
 
-    return await _createReservation({ client, shopSlug, barberId, activityId, date, time, notes, res });
+    return await _createReservation({ client, shopSlug, barberId, activityId, date, time, notes, additionalMembers, res });
   } catch (error) {
     console.error('bookExisting error:', error);
     res.status(500).json({ ok: false, msg: 'Error creando el turno' });
   }
 };
 
-async function _createReservation({ client, shopSlug, barberId, activityId, date, time, notes, res }) {
+async function _createReservation({ client, shopSlug, barberId, activityId, date, time, notes, additionalMembers, res }) {
   const [barber, activity, shop] = await Promise.all([
     Barber.findById(barberId),
     Activity.findById(activityId),
@@ -180,6 +180,22 @@ async function _createReservation({ client, shopSlug, barberId, activityId, date
     return res.status(409).json({ ok: false, msg: 'Ese horario ya fue tomado. Elige otro.' });
   }
 
+  // Verificar que el cliente no tenga ya un turno ese dia (mismo celular)
+  const clientDayConflict = await Reservation.findOne({ client: client._id, date, status: { $ne: 'cancelled' } });
+  if (clientDayConflict) {
+    return res.status(409).json({ ok: false, msg: `Ya tenes un turno reservado para ese dia a las ${clientDayConflict.time}. Cancela el anterior si queres cambiarlo.` });
+  }
+
+  // Verificar conflictos para los turnos adicionales del grupo
+  if (additionalMembers?.length) {
+    for (const member of additionalMembers) {
+      const c = await Reservation.findOne({ barber: barberId, date, time: member.time, status: { $ne: 'cancelled' } });
+      if (c) {
+        return res.status(409).json({ ok: false, msg: `El horario ${member.time} ya fue tomado. Intenta de nuevo.` });
+      }
+    }
+  }
+
   const reservation = await Reservation.create({
     shop: shop._id,
     barber: barberId,
@@ -187,27 +203,56 @@ async function _createReservation({ client, shopSlug, barberId, activityId, date
     client: client._id,
     date,
     time,
-    notes,
+    notes: notes || '',
     status: 'pending',
   });
 
-  const populated = await reservation.populate([
+  // Crear reservas adicionales para los integrantes del grupo
+  const extraReservations = [];
+  if (additionalMembers?.length) {
+    for (const member of additionalMembers) {
+      const memberNotes = member.name + (notes ? ` — ${notes}` : '');
+      const r = await Reservation.create({
+        shop: shop._id,
+        barber: barberId,
+        activity: activityId,
+        client: client._id,
+        date,
+        time: member.time,
+        notes: memberNotes,
+        status: 'pending',
+      });
+      extraReservations.push(r);
+    }
+  }
+
+  const populateFields = [
     { path: 'barber', select: 'name whatsapp' },
     { path: 'activity', select: 'title price' },
     { path: 'client', select: 'name phone' },
-  ]);
+  ];
 
-  const confirmMsg =
-    `*TURNO RESERVADO*\n\n` +
-    `Hola ${client.name}!\n` +
-    `Tu turno en *${shop.name}* fue registrado.\n\n` +
-    `Servicio: ${activity.title}\n` +
-    `Barbero: ${barber.name}\n` +
-    `Fecha: ${date}\n` +
-    `Hora: ${time}\n\n` +
-    `Te esperamos!`;
+  const allReservations = [reservation, ...extraReservations];
+  const populated = await Promise.all(allReservations.map((r) => r.populate(populateFields)));
+
+  // Mensaje de confirmacion por WhatsApp
+  let confirmMsg = `*TURNO RESERVADO*\n\nHola ${client.name}!\nTu turno en *${shop.name}* fue registrado.\n\n`;
+
+  if (additionalMembers?.length) {
+    confirmMsg += `*Reservas del grupo:*\n`;
+    confirmMsg += `• ${client.name}: ${time}\n`;
+    additionalMembers.forEach((m) => { confirmMsg += `• ${m.name}: ${m.time}\n`; });
+    confirmMsg += `\nServicio: ${activity.title}\nBarbero: ${barber.name}\nFecha: ${date}\n\nTe esperamos!`;
+  } else {
+    confirmMsg +=
+      `Servicio: ${activity.title}\n` +
+      `Barbero: ${barber.name}\n` +
+      `Fecha: ${date}\n` +
+      `Hora: ${time}\n\n` +
+      `Te esperamos!`;
+  }
 
   sendWhatsApp(client.phone, confirmMsg).catch((e) => console.warn('WA confirmacion error:', e));
 
-  return res.status(201).json({ ok: true, reservation: populated });
+  return res.status(201).json({ ok: true, reservation: populated[0], reservations: populated });
 }
