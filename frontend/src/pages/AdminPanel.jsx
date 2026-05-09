@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import QRCode from 'react-qr-code';
+import { QRCode } from 'react-qr-code';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthProvider';
 
@@ -701,3 +701,4 @@ function TabWhatsApp() {
     </div>
   );
 }
+
