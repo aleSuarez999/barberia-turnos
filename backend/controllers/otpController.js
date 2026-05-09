@@ -1,3 +1,4 @@
+﻿import jwt from 'jsonwebtoken';
 import Otp from '../models/Otp.js';
 import Client from '../models/Client.js';
 import Reservation from '../models/Reservation.js';
@@ -8,7 +9,78 @@ import { sendWhatsApp } from '../utils/whatsappClient.js';
 
 const generateCode = () => String(Math.floor(100000 + Math.random() * 900000));
 
-// Verifica si el cliente ya existe. Si es nuevo, envía OTP.
+// --- REGISTRO ---
+
+// Paso 1: envia OTP para registrar un cliente nuevo
+export const sendRegisterOtp = async (req, res) => {
+  try {
+    const { phone, name, email } = req.body;
+    if (!phone || !name) {
+      return res.status(400).json({ ok: false, msg: 'Nombre y celular son obligatorios' });
+    }
+
+    const existing = await Client.findOne({ phone });
+    if (existing) {
+      return res.status(400).json({ ok: false, alreadyRegistered: true, msg: 'Ese celular ya esta registrado. Podes ingresar directamente.' });
+    }
+
+    const code = generateCode();
+    await Otp.deleteMany({ phone });
+    await Otp.create({ phone, code, name, email });
+
+    try {
+      await sendWhatsApp(phone, `*Codigo de verificacion*\n\nHola ${name}! Tu codigo es: *${code}*\n\nValido por 10 minutos.`);
+    } catch (waError) {
+      console.warn(`[OTP-Register] WhatsApp no pudo enviar a ${phone}. Codigo: ${code} — Error: ${waError.message}`);
+    }
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('sendRegisterOtp error:', error);
+    res.status(500).json({ ok: false, msg: 'Error enviando codigo. Verifica que el numero sea correcto.' });
+  }
+};
+
+// Paso 2: verifica OTP, crea el cliente y devuelve JWT
+export const verifyRegisterOtp = async (req, res) => {
+  try {
+    const { phone, code } = req.body;
+    if (!phone || !code) {
+      return res.status(400).json({ ok: false, msg: 'Faltan datos' });
+    }
+
+    const otp = await Otp.findOne({ phone });
+    if (!otp) {
+      return res.status(400).json({ ok: false, msg: 'El codigo expiro o no existe. Solicita uno nuevo.' });
+    }
+    if (otp.code !== String(code)) {
+      return res.status(400).json({ ok: false, msg: 'Codigo incorrecto' });
+    }
+
+    await Otp.deleteMany({ phone });
+
+    // Verificar si el cliente ya existe (por si hubo una prueba previa)
+    let client = await Client.findOne({ phone });
+    if (!client) {
+      client = await Client.create({ name: otp.name, phone, email: otp.email || '' });
+    }
+
+    const token = jwt.sign(
+      { uid: client._id, role: 'client', type: 'client' },
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' },
+    );
+
+    return res.status(201).json({ ok: true, token, userType: 'client', name: client.name });
+  } catch (error) {
+    console.error('verifyRegisterOtp error:', error);
+    res.status(500).json({ ok: false, msg: 'Error confirmando registro' });
+  }
+};
+
+// --- BOOKING (flujo existente) ---
+
+// Verifica si el cliente ya existe. Si es nuevo, envia OTP.
 export const sendOtp = async (req, res) => {
   try {
     const { phone, name, email } = req.body;
@@ -18,16 +90,19 @@ export const sendOtp = async (req, res) => {
 
     const existing = await Client.findOne({ phone });
     if (existing) {
-      // Cliente conocido → no necesita OTP
       return res.json({ ok: true, clientExists: true });
     }
 
-    // Cliente nuevo → generar y enviar OTP
     const code = generateCode();
     await Otp.deleteMany({ phone });
     await Otp.create({ phone, code, name, email });
 
-    await sendWhatsApp(phone, `*Codigo de verificacion*\n\nHola ${name}! Tu codigo es: *${code}*\n\nValido por 10 minutos.`);
+    try {
+      await sendWhatsApp(phone, `*Codigo de verificacion*\n\nHola ${name}! Tu codigo es: *${code}*\n\nValido por 10 minutos.`);
+    } catch (waError) {
+      // WhatsApp fallo pero el OTP ya esta guardado en MongoDB; se permite continuar
+      console.warn(`[OTP] WhatsApp no pudo enviar a ${phone}. Codigo: ${code} — Error: ${waError.message}`);
+    }
 
     res.json({ ok: true, clientExists: false });
   } catch (error) {
@@ -47,7 +122,7 @@ export const verifyAndBook = async (req, res) => {
 
     const otp = await Otp.findOne({ phone });
     if (!otp) {
-      return res.status(400).json({ ok: false, msg: 'El codigo expiro o no existe. Solicitá uno nuevo.' });
+      return res.status(400).json({ ok: false, msg: 'El codigo expiro o no existe. Solicita uno nuevo.' });
     }
     if (otp.code !== String(code)) {
       return res.status(400).json({ ok: false, msg: 'Codigo incorrecto' });
@@ -55,7 +130,11 @@ export const verifyAndBook = async (req, res) => {
 
     await Otp.deleteMany({ phone });
 
-    const client = await Client.create({ name: otp.name, phone, email: otp.email || '' });
+    // Buscar cliente existente antes de crear para evitar error de clave duplicada
+    let client = await Client.findOne({ phone });
+    if (!client) {
+      client = await Client.create({ name: otp.name, phone, email: otp.email || '' });
+    }
 
     return await _createReservation({ client, shopSlug, barberId, activityId, date, time, notes, res });
   } catch (error) {
@@ -98,7 +177,7 @@ async function _createReservation({ client, shopSlug, barberId, activityId, date
 
   const conflict = await Reservation.findOne({ barber: barberId, date, time, status: { $ne: 'cancelled' } });
   if (conflict) {
-    return res.status(409).json({ ok: false, msg: 'Ese horario ya fue tomado. Elegí otro.' });
+    return res.status(409).json({ ok: false, msg: 'Ese horario ya fue tomado. Elige otro.' });
   }
 
   const reservation = await Reservation.create({
@@ -119,13 +198,13 @@ async function _createReservation({ client, shopSlug, barberId, activityId, date
   ]);
 
   const confirmMsg =
-    `*TURNO RESERVADO ✂*\n\n` +
+    `*TURNO RESERVADO*\n\n` +
     `Hola ${client.name}!\n` +
     `Tu turno en *${shop.name}* fue registrado.\n\n` +
-    `📋 Servicio: ${activity.title}\n` +
-    `💈 Barbero: ${barber.name}\n` +
-    `📅 Fecha: ${date}\n` +
-    `⏰ Hora: ${time}\n\n` +
+    `Servicio: ${activity.title}\n` +
+    `Barbero: ${barber.name}\n` +
+    `Fecha: ${date}\n` +
+    `Hora: ${time}\n\n` +
     `Te esperamos!`;
 
   sendWhatsApp(client.phone, confirmMsg).catch((e) => console.warn('WA confirmacion error:', e));

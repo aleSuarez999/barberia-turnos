@@ -7,11 +7,13 @@ export const getReservations = async (req, res) => {
   try {
     const filter = {};
     if (req.userType === 'admin') {
-      filter.shop = req.user.shop;
+      if (req.role !== 'superadmin') filter.shop = req.user.shop;
+    } else {
+      filter.client = req.uid;
     }
 
     const reservations = await Reservation.find(filter)
-      .populate('client', 'name phone username')
+      .populate('client', 'name phone')
       .populate('barber', 'name')
       .populate('activity', 'title price')
       .sort({ date: -1, time: 1 });
@@ -37,7 +39,7 @@ export const createReservation = async (req, res) => {
 
     const conflict = await Reservation.findOne({ barber, date, time, status: { $ne: 'cancelled' } });
     if (conflict) {
-      return res.status(409).json({ ok: false, msg: 'Ese horario ya está tomado' });
+      return res.status(409).json({ ok: false, msg: 'Ese horario ya esta tomado' });
     }
 
     const reservation = new Reservation({
@@ -76,6 +78,11 @@ export const updateReservationStatus = async (req, res) => {
     const reservation = await Reservation.findById(id);
     if (!reservation) {
       return res.status(404).json({ ok: false, msg: 'Turno no encontrado' });
+    }
+
+    // Clientes solo pueden cancelar sus propios turnos
+    if (req.userType === 'client' && reservation.client.toString() !== req.uid) {
+      return res.status(403).json({ ok: false, msg: 'No autorizado' });
     }
 
     reservation.status = status;

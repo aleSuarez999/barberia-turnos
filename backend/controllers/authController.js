@@ -18,13 +18,7 @@ const createToken = (user) => {
 export const login = async (req, res) => {
   try {
     const { username, password } = req.body;
-    let user = await Admin.findOne({ username });
-    let userType = 'admin';
-
-    if (!user) {
-      user = await Client.findOne({ username });
-      userType = 'client';
-    }
+    const user = await Admin.findOne({ username });
 
     if (!user) {
       return res.status(401).json({ ok: false, msg: 'Credenciales invalidas' });
@@ -39,34 +33,30 @@ export const login = async (req, res) => {
     return res.json({
       ok: true,
       token,
-      userType,
-      role: user.role || 'client',
-      name: user.name || user.username,
+      userType: 'admin',
+      role: user.role,
+      name: user.username,
     });
   } catch (error) {
     return res.status(500).json({ ok: false, msg: 'Error en el login', error: error.message });
   }
 };
 
-export const registerClient = async (req, res) => {
+// Login de cliente: solo con celular, sin contrasena
+export const clientLogin = async (req, res) => {
   try {
-    const { username, password, name, phone, email } = req.body;
-    if (!username || !password || !name) {
-      return res.status(400).json({ ok: false, msg: 'Faltan datos requeridos' });
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ ok: false, msg: 'Celular requerido' });
+
+    const client = await Client.findOne({ phone });
+    if (!client) {
+      return res.status(404).json({ ok: false, notFound: true, msg: 'Numero no registrado' });
     }
 
-    const existing = await Client.findOne({ username });
-    if (existing) {
-      return res.status(400).json({ ok: false, msg: 'El nombre de usuario ya existe' });
-    }
-
-    const hashed = bcrypt.hashSync(password, 10);
-    const client = new Client({ username, password: hashed, name, phone, email });
-    await client.save();
-
-    return res.status(201).json({ ok: true, client: { id: client._id, username: client.username, name: client.name } });
+    const token = createToken(client);
+    return res.json({ ok: true, token, userType: 'client', name: client.name });
   } catch (error) {
-    return res.status(500).json({ ok: false, msg: 'Error creando cliente', error: error.message });
+    return res.status(500).json({ ok: false, msg: 'Error en el login', error: error.message });
   }
 };
 
