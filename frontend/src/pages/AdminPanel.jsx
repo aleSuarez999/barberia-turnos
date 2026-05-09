@@ -50,7 +50,7 @@ export default function AdminPanel() {
 /* ======= BARBERIAS (superadmin) ======= */
 function TabBarberias() {
   const [shops, setShops] = useState([]);
-  const emptyForm = { name: '', slug: '', cuit: '', address: '', phone: '', whatsappNumber: '' };
+  const emptyForm = { name: '', slug: '', cuit: '', address: '', whatsappNumber: '' };
   const [form, setForm] = useState(emptyForm);
   const [imageFile, setImageFile] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
@@ -87,7 +87,7 @@ function TabBarberias() {
 
   const editShop = (s) => {
     setEditing(s._id);
-    setForm({ name: s.name, slug: s.slug || '', cuit: s.cuit || '', address: s.address || '', phone: s.phone || '', whatsappNumber: s.whatsappNumber || '' });
+    setForm({ name: s.name, slug: s.slug || '', cuit: s.cuit || '', address: s.address || '', whatsappNumber: s.whatsappNumber || '' });
     setImageFile(null);
     setLogoFile(null);
     setMsg('');
@@ -122,7 +122,6 @@ function TabBarberias() {
         </div>
         <input name="cuit" placeholder="CUIT / CUIL / DNI" value={form.cuit} onChange={handleChange} />
         <input name="address" placeholder="Domicilio" value={form.address} onChange={handleChange} />
-        <input name="phone" placeholder="Telefono" value={form.phone} onChange={handleChange} />
         <input name="whatsappNumber" placeholder="WhatsApp (ej: 5491100000000)" value={form.whatsappNumber} onChange={handleChange} />
         <div className="file-upload-row">
           <label className="file-upload-label">
@@ -156,7 +155,6 @@ function TabBarberias() {
               {s.slug && <span className="tag-list slug-tag">/{s.slug}/turnos</span>}
               {s.cuit && <span className="tag-list">CUIT/DNI: {s.cuit}</span>}
               {s.address && <span className="tag-list">{s.address}</span>}
-              {s.phone && <span className="tag-list">{s.phone}</span>}
               {!s.active && <span className="tag-list tag-inactive">Inactiva</span>}
             </div>
             <div className="item-actions">
